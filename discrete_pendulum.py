@@ -19,6 +19,7 @@ class Pendulum():
 
     def move(self, u):
         self.x = np.array([[1., self.dt], [-self.dt * self.g/self.l, 1 -self.beta/self.m * self.dt]]) @ self.x + np.array([[0], [self.dt * u]])
+    
     # def control(self):
     #     u = 10 * (-self.x[0, 0])
     #     return 7 * np.tanh(u)
@@ -28,8 +29,6 @@ class Pendulum():
         b = -self.beta/self.m
         u = -(a+1) * self.x[0, 0] - (b+2) * self.x[1, 0]
         return 5 * np.tanh(u)
-        
-
 
 def draw_quiver():
     x1_list = []
@@ -46,22 +45,23 @@ def draw_quiver():
             pend.move(u)
             norm = np.linalg.norm(np.array([(pend.x[0, 0] - x1), (pend.x[1, 0] - x2)]))
             colors.append(norm)
-            x1_direction_list.append((pend.x[0, 0] - x1) / norm)# / np.linalg.norm((pend.x[0, 0] - x1)))
-            x2_direction_list.append((pend.x[1, 0] - x2)/ norm)# / np.linalg.norm(pend.x[1, 0] - x2))
+            x1_direction_list.append((pend.x[0, 0] - x1) / norm)
+            x2_direction_list.append((pend.x[1, 0] - x2)/ norm)
     fig, ax = plt.subplots(figsize = (12, 7))
     ax.quiver(x1_list, x2_list, x1_direction_list, x2_direction_list,
          colors, scale = 30)
     plt.savefig('quiver.png')
  
-def main(x1):
+def main(sup_x1):
     fig = plt.figure()
+    x1 = (2 * np.random.rand() - 1.) * sup_x1
     pendulum = Pendulum(x1, 0)
     pendulum.draw(fig)
     x1 = []
     x2 = []
     u_list = []
     for i in range(20):
-        if i < 5:
+        if i < 4:
             u = 2 * np.random.rand() - 1 
         else:
             u = pendulum.control()
@@ -74,7 +74,6 @@ def main(x1):
         pendulum.draw(fig)
         plt.savefig('results/pend.png')
         plt.pause(0.05)     
-    #plots 
     plt.figure()
     plt.plot(x1)
     plt.savefig('results/x1.png')
@@ -86,13 +85,27 @@ def main(x1):
     plt.savefig('results/u.png')
 
 
-def forward_reach(x, u):
-    pass
-
-def compute_weak_set():
-    pass
-
-
+def rollouts(num, sup_x1):
+    compteur = 0
+    for i in range(num):
+        x1 = (2 * np.random.rand() - 1.) * sup_x1
+        pendulum = Pendulum(x1, 0)
+        for i in range(20):
+            if i < 4:
+                u = 2 * np.random.rand() - 1 
+            else:
+                u = pendulum.control()
+            pendulum.move(u)
+            if (1 - pendulum.x[0, 0]**2) < 0:
+                break
+        # print(f"Initial position: {x1}")
+        # print(f"Final position: {pendulum.x[0, 0]}\n\n")
+        if np.abs(pendulum.x[0, 0]) > 0.3:
+                compteur += 1
+    return compteur / num
+    
 if __name__ == '__main__':
-    main(0.15)
+    sup_x1 = 0.2
+    main(sup_x1)
+    print("Failing ratio: ", rollouts(100, sup_x1))
     # draw_quiver()
