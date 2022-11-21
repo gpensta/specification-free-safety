@@ -1,5 +1,9 @@
 import numpy as np
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
+import stable_baselines3
+from stable_baselines3.common.env_checker import check_env
+from stable_baselines3 import PPO
+from stable_baselines3.common.env_util import make_vec_env
 
 class Pendulum():
     def __init__(self, x1, x2) -> None:
@@ -9,6 +13,7 @@ class Pendulum():
         self.beta = 1
         self.m = 1
         self.dt = 0.1
+        self.model = PPO.load('models/inv_pend')
 
     def draw(self, fig):
         plt.cla()
@@ -24,7 +29,12 @@ class Pendulum():
     #     u = 10 * (-self.x[0, 0])
     #     return 7 * np.tanh(u)
 
-    def control(self):
+    def rl_control(self):
+        u, _ = self.model.predict(self.x.flatten())
+        u = u[0]
+        return u
+
+    def pd_control(self):
         a = -self.g/self.l
         b = -self.beta/self.m
         u = -(a+1) * self.x[0, 0] - (b+2) * self.x[1, 0]
@@ -41,7 +51,7 @@ def draw_quiver():
             x1_list.append(x1)
             x2_list.append(x2)
             pend = Pendulum(x1, x2)
-            u = pend.control()
+            u = pend.rl_control()
             pend.move(u)
             norm = np.linalg.norm(np.array([(pend.x[0, 0] - x1), (pend.x[1, 0] - x2)]))
             colors.append(norm)
@@ -50,7 +60,7 @@ def draw_quiver():
     fig, ax = plt.subplots(figsize = (12, 7))
     ax.quiver(x1_list, x2_list, x1_direction_list, x2_direction_list,
          colors, scale = 30)
-    plt.savefig('quiver.png')
+    plt.savefig('results/state_space.png')
  
 def main(sup_x1):
     fig = plt.figure()
@@ -64,7 +74,7 @@ def main(sup_x1):
         if i < 4:
             u = 2 * np.random.rand() - 1 
         else:
-            u = pendulum.control()
+            u = pendulum.pd_control()
         u_list.append(u)
         pendulum.move(u)
         x1.append(pendulum.x[0, 0])
@@ -94,7 +104,7 @@ def rollouts(num, sup_x1):
             if i < 4:
                 u = 2 * np.random.rand() - 1 
             else:
-                u = pendulum.control()
+                u = pendulum.rl_control()
             pendulum.move(u)
             if (1 - pendulum.x[0, 0]**2) < 0:
                 break
@@ -105,7 +115,7 @@ def rollouts(num, sup_x1):
     return compteur / num
     
 if __name__ == '__main__':
-    sup_x1 = 0.2
-    main(sup_x1)
-    print("Failing ratio: ", rollouts(100, sup_x1))
-    # draw_quiver()
+    sup_x1 = 0.15
+    # main(sup_x1)
+    # print("Failing ratio: ", rollouts(100, sup_x1))
+    draw_quiver()

@@ -7,7 +7,7 @@ import stable_baselines3
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
-
+import matplotlib.pyplot as plt
 
 class EnvPendulum(gym.Env):
     
@@ -57,7 +57,40 @@ def eval_model(model_path):
     return success / 100
 
 if __name__ == '__main__':
-    env = EnvPendulum()
-    model = PPO("MlpPolicy", env, verbose=1)
-    model.learn(100000)
-    model.save("models/inv_pend")
+    
+    # env = EnvPendulum()
+    # model = PPO("MlpPolicy", env, verbose=1)
+    # model.learn(100000)
+    # model.save("models/inv_pend")
+
+    # print(eval_model('models/inv_pend'))
+    model = PPO.load('models/inv_pend')
+    fig = plt.figure()
+    x1 = (2 * np.random.rand() - 1.) * 0.3
+    pendulum = Pendulum(x1, 0)
+    pendulum.draw(fig)
+    x1 = []
+    x2 = []
+    u_list = []
+    for i in range(20):
+    
+        u, _ = model.predict(pendulum.x.flatten())
+        u = u[0]
+        u_list.append(u)
+        pendulum.move(u)
+        x1.append(pendulum.x[0, 0])
+        x2.append(pendulum.x[1, 0])
+        if (1 - pendulum.x[0, 0]**2) < 0:
+            break
+        pendulum.draw(fig)
+        plt.savefig('results/pend.png')
+        plt.pause(0.05)
+    plt.figure()
+    plt.plot(x1)
+    plt.savefig('results/x1.png')
+    plt.figure()
+    plt.plot(x2)
+    plt.savefig('results/x2.png')
+    plt.figure()
+    plt.plot(u_list)
+    plt.savefig('results/u.png')
