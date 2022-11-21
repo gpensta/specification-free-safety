@@ -1,3 +1,5 @@
 *.png
 models/
 logs/
+results/
+pendulum.py
