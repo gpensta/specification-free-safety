@@ -7,13 +7,13 @@ beta = 1.;
 A = [1. dt; -dt*g/l 1-beta/m*dt];
 k1 = 4;
 k2 = 9;
-max_u = 18;
+max_u = 10;
 % END PARAMS
 
-X = zonotope(interval([-.1; -.00001],[.1; .00001]));
+X = zonotope(interval([-.15; -.1],[.15; .1]));
 U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
 
-max_w = get_max_w(X, U, A, dt, k1, k2);
+[w, max_w] = get_max_w(X, U, A, dt, k1, k2);
 
 W = max_w * zonotope(interval([0.; -1.],[0. ; 1.]));
 fX = k_step_forward(X, W, A, dt, k1);
@@ -24,12 +24,12 @@ f = figure;
 hold on;
 xlim([-5 5]);
 ylim([-5 5]);
-initial_set = plot(X, [1,2], 'b', 'linewidth', 2);
-wplot = plot(w & U, [1,2], 'k', 'linewidth', 2);
-plot(w , [1,2], 'k', 'linewidth', 2);
+initial_set = plot(X, [1,2], 'm', 'linewidth', 2);
+wcapu = plot(W, [1,2], 'b', 'linewidth', 2);
+w = plot(w , [1,2], 'k', 'linewidth', 2);
 f = plot(fX, [1,2], 'r', 'linewidth', 2);
 b = plot(bX, [1,2], 'g', 'linewidth', 2);
-legend([f, b, initial_set, wplot], sprintf('F_%d(S, W=%.2f*U)', k1, max_w/max_u),sprintf('B_%d(T, U = [-%.0f, %.0f])', k2, max_u, max_u), 'Initial=Target', 'W');
+legend([f, b, initial_set, wcapu, w], sprintf('F_%d(S, W=%.2f*U)', k1, max_w/max_u),sprintf('B_%d(T, U = [-%.0f, %.0f])', k2, max_u, max_u), 'Initial=Target', 'W \cap U', 'W');
 
 
 function res = k_step_forward(x, u, A, dt, k)
@@ -46,7 +46,7 @@ function res = k_step_backward(x, u, A, dt, k)
     res = x;
 end
 
-function res = get_max_w(X, U, A, dt, k1, k2)
+function [w, max_w] = get_max_w(X, U, A, dt, k1, k2)
     n_points = 200;
     Theta = linspace(0, 2*pi, n_points);
     c = zeros(2, n_points);
@@ -73,5 +73,5 @@ function res = get_max_w(X, U, A, dt, k1, k2)
     end
 
     w = (1/dt)*invsumai*mptPolytope(c', d);
-    res =supportFunc(w & U, [0; 1]);
+    max_w =supportFunc(w & U, [0; 1]);
 end 
