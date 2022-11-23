@@ -3,4 +3,4 @@ models/
 logs/
 results/
 pendulum.py
-__pycache__
+__pycache__ 

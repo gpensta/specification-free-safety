@@ -34,11 +34,11 @@ class Pendulum():
         u = u[0]
         return u
 
-    def pd_control(self):
+    def pd_control(self, sup_u):
         a = -self.g/self.l
         b = -self.beta/self.m
         u = -(a+1) * self.x[0, 0] - (b+2) * self.x[1, 0]
-        return 5 * np.tanh(u)
+        return sup_u * np.tanh(u)
 
 def draw_quiver():
     x1_list = []
@@ -62,19 +62,20 @@ def draw_quiver():
          colors, scale = 30)
     plt.savefig('results/state_space.png')
  
-def main(sup_x1):
+def main():
     fig = plt.figure()
-    x1 = (2 * np.random.rand() - 1.) * sup_x1
+    x1 = (2 * np.random.rand() - 1.) * 0.1
     pendulum = Pendulum(x1, 0)
     pendulum.draw(fig)
     x1 = []
     x2 = []
     u_list = []
-    for i in range(20):
+    w = 1
+    for i in range(50):
         if i < 4:
-            u = 2 * np.random.rand() - 1 
+            u = (2 * np.random.rand() - 1) * w 
         else:
-            u = pendulum.pd_control()
+            u = pendulum.pd_control(5)
         u_list.append(u)
         pendulum.move(u)
         x1.append(pendulum.x[0, 0])
@@ -85,13 +86,21 @@ def main(sup_x1):
         plt.savefig('results/pend.png')
         plt.pause(0.05)     
     plt.figure()
+    plt.title("x1")
     plt.plot(x1)
+    plt.scatter([3], [x1[3]])
+    plt.scatter([12], [x1[12]])
     plt.savefig('results/x1.png')
     plt.figure()
+    plt.title("x2")
     plt.plot(x2)
+    plt.scatter([3], [x2[3]])
+    plt.scatter([12], [x2[12]])
     plt.savefig('results/x2.png')
     plt.figure()
+    plt.title("u")
     plt.plot(u_list)
+    plt.scatter([3], [u_list[3]])
     plt.savefig('results/u.png')
 
 
@@ -116,6 +125,6 @@ def rollouts(num, sup_x1):
     
 if __name__ == '__main__':
     sup_x1 = 0.15
-    # main(sup_x1)
+    main()
     # print("Failing ratio: ", rollouts(100, sup_x1))
-    draw_quiver()
+    # draw_quiver()
