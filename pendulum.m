@@ -7,7 +7,7 @@ beta = 1.;
 A = [1. dt; -dt*g/l 1-beta/m*dt];
 k1 = 4;
 k2 = 9;
-max_u = 10;
+max_u = 8;
 % END PARAMS
 
 X = zonotope(interval([-.15; -.1],[.15; .1]));
