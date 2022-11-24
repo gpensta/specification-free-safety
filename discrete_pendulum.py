@@ -46,12 +46,13 @@ def draw_quiver():
     x1_direction_list = []
     x2_direction_list = []
     colors = []
+    pend = Pendulum(0, 0)
     for x1 in np.linspace(-1. , 1., 30):
         for x2 in np.linspace(-5. , 5, 30):
             x1_list.append(x1)
             x2_list.append(x2)
-            pend = Pendulum(x1, x2)
-            u = pend.rl_control()
+            pend.x =np.array([[x1], [x2]])
+            u = 0 # pend.rl_control()
             pend.move(u)
             norm = np.linalg.norm(np.array([(pend.x[0, 0] - x1), (pend.x[1, 0] - x2)]))
             colors.append(norm)
@@ -60,7 +61,7 @@ def draw_quiver():
     fig, ax = plt.subplots(figsize = (12, 7))
     ax.quiver(x1_list, x2_list, x1_direction_list, x2_direction_list,
          colors, scale = 30)
-    plt.savefig('results/state_space.png')
+    plt.savefig('results/no_input_state_space.png')
  
 def main():
     fig = plt.figure()
@@ -125,6 +126,6 @@ def rollouts(num, sup_x1):
     
 if __name__ == '__main__':
     sup_x1 = 0.15
-    main()
+    # main()
     # print("Failing ratio: ", rollouts(100, sup_x1))
-    # draw_quiver()
+    draw_quiver()

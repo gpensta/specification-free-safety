@@ -7,17 +7,18 @@ beta = 1.;
 A = [1. dt; -dt*g/l 1-beta/m*dt];
 k1 = 4;
 k2 = 9;
-max_u = 8;
+max_u = 9;
 % END PARAMS
 
 X = zonotope(interval([-.15; -.1],[.15; .1]));
+T = zonotope(interval([.4; -.1],[.6; .1]));
 U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
 
-[w, max_w] = get_max_w(X, U, A, dt, k1, k2);
+W = get_max_w(X, T, U, A, dt, k1, k2);
 
-W = max_w * zonotope(interval([0.; -1.],[0. ; 1.]));
+% W = max_w * zonotope(interval([0.; -1.],[0. ; 1.]));
 fX = k_step_forward(X, W, A, dt, k1);
-bX = k_step_backward(X, U, A, dt, k2);
+bX = k_step_backward(T, U, A, dt, k2);
 
 close all;
 f = figure;
@@ -25,11 +26,12 @@ hold on;
 xlim([-5 5]);
 ylim([-5 5]);
 initial_set = plot(X, [1,2], 'm', 'linewidth', 2);
-wcapu = plot(W, [1,2], 'b', 'linewidth', 2);
-w = plot(w , [1,2], 'k', 'linewidth', 2);
+target_set = plot(T, [1,2], 'b', 'linewidth', 2);
+% wcapu = plot(W, [1,2], 'b', 'linewidth', 2);
+w = plot(W , [1,2], 'k', 'linewidth', 2);
 f = plot(fX, [1,2], 'r', 'linewidth', 2);
 b = plot(bX, [1,2], 'g', 'linewidth', 2);
-legend([f, b, initial_set, wcapu, w], sprintf('F_%d(S, W=%.2f*U)', k1, max_w/max_u),sprintf('B_%d(T, U = [-%.0f, %.0f])', k2, max_u, max_u), 'Initial=Target', 'W \cap U', 'W');
+legend([f, b, initial_set, target_set, w], sprintf('F_%d(S, W=[%.2f, %.2f])', k1, w.YData(1), w.YData(2)),sprintf('B_%d(T, U = [-%.0f, %.0f])', k2, supportFunc(U, [0; -1]), supportFunc(U, [0; 1])), 'Initial', 'Target', 'W');
 
 
 function res = k_step_forward(x, u, A, dt, k)
@@ -46,7 +48,7 @@ function res = k_step_backward(x, u, A, dt, k)
     res = x;
 end
 
-function [w, max_w] = get_max_w(X, U, A, dt, k1, k2)
+function w = get_max_w(X, T, U, A, dt, k1, k2)
     n_points = 200;
     Theta = linspace(0, 2*pi, n_points);
     c = zeros(2, n_points);
@@ -62,7 +64,7 @@ function [w, max_w] = get_max_w(X, U, A, dt, k1, k2)
         end
         invsumai = inv(sumai); % lhs
         % rhs
-        rho_s = supportFunc(X, l);
+        rho_s = supportFunc(T, l);
         rho_aiu = 0;
         for k = 0:k2-1
             rho_aiu = rho_aiu + supportFunc(-A^k*U*dt, l);
@@ -72,6 +74,6 @@ function [w, max_w] = get_max_w(X, U, A, dt, k1, k2)
         d(i, 1) = rhs;
     end
 
-    w = (1/dt)*invsumai*mptPolytope(c', d);
-    max_w =supportFunc(w & U, [0; 1]);
+    w_box = (1/dt)*invsumai*mptPolytope(c', d);
+    w = w_box & U;
 end 
