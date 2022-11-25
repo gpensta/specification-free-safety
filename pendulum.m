@@ -10,10 +10,10 @@ k2 = 9;
 max_u = 9;
 % END PARAMS
 
-X = zonotope(interval([-.15; -.1],[.15; .1]));
-T = zonotope(interval([.4; -.1],[.6; .1]));
+T = zonotope(interval([-.15; -.1],[.15; .1]));
+X = zonotope(interval([.4; -.1],[.6; .1]));
 U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
-
+% U_0 = 0 * zonotope(interval([0.; -1.],[0. ; 1.]));
 W = get_max_w(X, T, U, A, dt, k1, k2);
 
 % W = max_w * zonotope(interval([0.; -1.],[0. ; 1.]));
