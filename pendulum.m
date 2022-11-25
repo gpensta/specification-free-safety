@@ -13,26 +13,28 @@ max_u = 9;
 T = zonotope(interval([-.15; -.1],[.15; .1]));
 X = zonotope(interval([.4; -.1],[.6; .1]));
 U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
-% U_0 = 0 * zonotope(interval([0.; -1.],[0. ; 1.]));
+U_0 = 0 * zonotope(interval([0.; -6.67],[0. ; -6.67]));
 W = get_max_w(X, T, U, A, dt, k1, k2);
+if isempty(W.vertices)
+    disp("W is empty.");
+else
 
-% W = max_w * zonotope(interval([0.; -1.],[0. ; 1.]));
-fX = k_step_forward(X, W, A, dt, k1);
-bX = k_step_backward(T, U, A, dt, k2);
+    % W = max_w * zonotope(interval([0.; -1.],[0. ; 1.]));
+    fX = k_step_forward(X, W, A, dt, k1);
+    bX = k_step_backward(T, U, A, dt, k2);
 
-close all;
-f = figure;
-hold on;
-xlim([-5 5]);
-ylim([-5 5]);
-initial_set = plot(X, [1,2], 'm', 'linewidth', 2);
-target_set = plot(T, [1,2], 'b', 'linewidth', 2);
-% wcapu = plot(W, [1,2], 'b', 'linewidth', 2);
-w = plot(W , [1,2], 'k', 'linewidth', 2);
-f = plot(fX, [1,2], 'r', 'linewidth', 2);
-b = plot(bX, [1,2], 'g', 'linewidth', 2);
-legend([f, b, initial_set, target_set, w], sprintf('F_%d(S, W=[%.2f, %.2f])', k1, w.YData(1), w.YData(2)),sprintf('B_%d(T, U = [-%.0f, %.0f])', k2, supportFunc(U, [0; -1]), supportFunc(U, [0; 1])), 'Initial', 'Target', 'W');
-
+    close all;
+    f = figure;
+    hold on;
+    xlim([-5 5]);
+    ylim([-5 5]);
+    initial_set = plot(X, [1,2], 'm', 'linewidth', 2);
+    target_set = plot(T, [1,2], 'b', 'linewidth', 2);
+    w = plot(W , [1,2], 'k', 'linewidth', 2);
+    f = plot(fX, [1,2], 'r', 'linewidth', 2);
+    b = plot(bX, [1,2], 'g', 'linewidth', 2);
+    legend([f, b, initial_set, target_set, w], sprintf('F_%d(S, W = [%.2f, %.2f])', k1, w.YData(1), w.YData(2)),sprintf('B_%d(T, U = [-%.2f, %.2f])', k2, supportFunc(U, [0; -1]), supportFunc(U, [0; 1])), 'Initial', 'Target', 'W');
+end
 
 function res = k_step_forward(x, u, A, dt, k)
     for i = 1:k
