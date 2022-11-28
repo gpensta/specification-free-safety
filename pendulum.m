@@ -6,8 +6,8 @@ m = 1.;
 beta = 1.;
 A = [1. dt; -dt*g/l 1-beta/m*dt];
 k1 = 4;
-k2 = 9;
-max_u = 9;
+k2 = 20;
+max_u = 7;
 % END PARAMS
 
 T = zonotope(interval([-.15; -.1],[.15; .1]));
@@ -18,27 +18,29 @@ W = get_max_w(X, T, U, A, dt, k1, k2);
 if isempty(W.vertices)
     disp("W is empty.");
 else
-
-    % W = max_w * zonotope(interval([0.; -1.],[0. ; 1.]));
-    fX = k_step_forward(X, W, A, dt, k1);
-    bX = k_step_backward(T, U, A, dt, k2);
-
     close all;
     f = figure;
+    subplot(1, 2, 1);
     hold on;
-    xlim([-5 5]);
+    xlim([-1 1]);
     ylim([-5 5]);
-    initial_set = plot(X, [1,2], 'm', 'linewidth', 2);
-    target_set = plot(T, [1,2], 'b', 'linewidth', 2);
-    w = plot(W , [1,2], 'k', 'linewidth', 2);
-    f = plot(fX, [1,2], 'r', 'linewidth', 2);
-    b = plot(bX, [1,2], 'g', 'linewidth', 2);
-    legend([f, b, initial_set, target_set, w], sprintf('F_%d(S, W = [%.2f, %.2f])', k1, w.YData(1), w.YData(2)),sprintf('B_%d(T, U = [-%.2f, %.2f])', k2, supportFunc(U, [0; -1]), supportFunc(U, [0; 1])), 'Initial', 'Target', 'W');
+    fX = k_step_forward(X, W, A, dt, k1);
+    bX = k_step_backward(T, U, A, dt, k2);    
+    initial_set = plot(X, [1,2], 'm', 'linewidth', .5);
+    target_set = plot(T, [1,2], 'c', 'linewidth', .5);
+    draw_streamlines(A, dt, max_u, 7);
+    subplot(1, 2, 2);
+    hold on;
+    title("W and U");
+    u = plot(U, [1,2], 'b', 'linewidth', 10.);
+    w =plot(W, [1,2], 'r', 'linewidth', 7.);
+    legend([w, u], 'w', 'u');
 end
 
 function res = k_step_forward(x, u, A, dt, k)
     for i = 1:k
         x = A*x + dt*u;
+        f = plot(x, [1,2], 'r', 'linewidth', .5);
     end
     res = x;
 end
@@ -46,6 +48,9 @@ end
 function res = k_step_backward(x, u, A, dt, k)
     for i = 1:k
         x = inv(A) *  (x + -dt*u);
+        if mod(i, 2) == 0
+            b = plot(x, [1,2], 'g', 'linewidth', 0.5);
+        end
     end
     res = x;
 end
@@ -78,4 +83,49 @@ function w = get_max_w(X, T, U, A, dt, k1, k2)
 
     w_box = (1/dt)*invsumai*mptPolytope(c', d);
     w = w_box & U;
-end 
+end
+
+function res = clip(x, inf , sup)
+    if x < inf
+        x = inf;
+    elseif x > sup
+        x = sup;
+    end
+    res = x;
+end
+
+function res = pd_control(x, sup_u)
+    g = -10.;
+    l = 1.;
+    m = 1.;
+    beta = 1.;
+    a = -g/l;
+    b = -beta/m;
+    u = -(a+1)*x(1,1) - (b+2)*x(2, 1);
+    res = clip(u, -sup_u, sup_u);
+end
+
+function res = move(x, u, A, dt)
+        res = A*x + [0; dt]*u;
+end
+
+function draw_streamlines(A, dt, max_u, num)
+    n = 50;
+    [X, Y] = meshgrid(linspace(-1, 1, n), linspace(-5, 5, n));
+    [SX, SY] = meshgrid(linspace(-1, 1, num), linspace(-5, 5, num));
+    U = ones(n);
+    V = ones(n);
+
+    for i = 1:1:n
+        for j = 1:1:n
+            x1 = X(i, j);
+            x2 = Y(i, j);
+            x = [x1; x2];
+            u = pd_control(x, max_u);
+            x = move(x, u, A, dt);
+            U(i, j) = x(1, 1) - x1;
+            V(i, j) = x(2, 1) - x2;
+        end
+    end
+    streamline(X, Y, U, V, SX, SY) 
+end
