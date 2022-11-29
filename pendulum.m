@@ -7,34 +7,39 @@ beta = 1.;
 A = [1. dt; -dt*g/l 1-beta/m*dt];
 k1 = 4;
 k2 = 20;
-max_u = 7;
+% max_u = 14;
 % END PARAMS
 
-T = zonotope(interval([-.15; -.1],[.15; .1]));
-X = zonotope(interval([.4; -.1],[.6; .1]));
-U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
-U_0 = 0 * zonotope(interval([0.; -6.67],[0. ; -6.67]));
-W = get_max_w(X, T, U, A, dt, k1, k2);
-if isempty(W.vertices)
-    disp("W is empty.");
-else
-    close all;
-    f = figure;
-    subplot(1, 2, 1);
-    hold on;
-    xlim([-1 1]);
-    ylim([-5 5]);
-    fX = k_step_forward(X, W, A, dt, k1);
-    bX = k_step_backward(T, U, A, dt, k2);    
-    initial_set = plot(X, [1,2], 'm', 'linewidth', .5);
-    target_set = plot(T, [1,2], 'c', 'linewidth', .5);
-    draw_streamlines(A, dt, max_u, 7);
-    subplot(1, 2, 2);
-    hold on;
-    title("W and U");
-    u = plot(U, [1,2], 'b', 'linewidth', 10.);
-    w =plot(W, [1,2], 'r', 'linewidth', 7.);
-    legend([w, u], 'w', 'u');
+for max_u = 7:1:7
+    T = zonotope(interval([-.15; -.1],[.15; .1]));
+    X = zonotope(interval([.4; -.1],[.6; .1]));
+    U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
+    
+    W = get_max_w(X, T, U, A, dt, k1, k2);
+    if isempty(W.vertices)
+        disp("W is empty.");
+    else
+        close all;
+        f = figure('Position', [10 10 1920 1200]);
+        subplot(1, 2, 1);
+        hold on;
+        xlim([-1 1]);
+        ylim([-8 8]);
+        fX = k_step_forward(X, W, A, dt, k1);
+        bX = k_step_backward(T, U, A, dt, k2);    
+        initial_set = plot(X, [1,2], 'm', 'linewidth', .5);
+        target_set = plot(T, [1,2], 'g', 'linewidth', .5);
+        draw_streamlines(A, dt, max_u, 7);
+        subplot(1, 2, 2);
+        hold on;
+        title("W and U");
+        u = plot(U, [1,2], 'b', 'linewidth', 10.);
+        w =plot(W, [1,2], 'r', 'linewidth', 7.);
+        legend([w, u], 'w', 'u');
+        ylim([-20 20]);
+        xlim([-.1 .1]);
+%         saveas(f, sprintf("C:\\Users\\kiwin\\Pictures\\article\\pres\\%d.png", floor(max_u)));
+end
 end
 
 function res = k_step_forward(x, u, A, dt, k)
@@ -49,7 +54,7 @@ function res = k_step_backward(x, u, A, dt, k)
     for i = 1:k
         x = inv(A) *  (x + -dt*u);
         if mod(i, 2) == 0
-            b = plot(x, [1,2], 'g', 'linewidth', 0.5);
+            b = plot(x, [1,2], 'b', 'linewidth', 0.5);
         end
     end
     res = x;
@@ -111,8 +116,8 @@ end
 
 function draw_streamlines(A, dt, max_u, num)
     n = 50;
-    [X, Y] = meshgrid(linspace(-1, 1, n), linspace(-5, 5, n));
-    [SX, SY] = meshgrid(linspace(-1, 1, num), linspace(-5, 5, num));
+    [X, Y] = meshgrid(linspace(-1, 1, n), linspace(-8, 8, n));
+    [SX, SY] = meshgrid(linspace(-1, 1, num), linspace(-8, 8, num));
     U = ones(n);
     V = ones(n);
 
@@ -127,5 +132,6 @@ function draw_streamlines(A, dt, max_u, num)
             V(i, j) = x(2, 1) - x2;
         end
     end
-    streamline(X, Y, U, V, SX, SY) 
+    slines = streamline(X, Y, U, V, SX, SY);
+    set(slines, 'Color', 'k');
 end
