@@ -18,14 +18,14 @@ h2 = supervision_heatmap(A, dt, max_u, k1, k2, 10, .2, 25) ;
 
 figure; 
 subplot(1, 2, 1);
-title('Naive Controller');
 heatmap(h1, 'ColorLimits',[0 5]);
+title('Naive Controller');
 Ax = gca;
 Ax.XDisplayLabels = nan(size(Ax.XDisplayData));
 Ax.YDisplayLabels = nan(size(Ax.YDisplayData));
 subplot(1, 2, 2);
-title('Supervised Controller');
 heatmap(h2, 'ColorLimits',[0 5]);
+title('Supervised Controller');
 Ax = gca;
 Ax.XDisplayLabels = nan(size(Ax.XDisplayData));
 Ax.YDisplayLabels = nan(size(Ax.YDisplayData));
@@ -43,7 +43,7 @@ function h = supervision_heatmap(A, dt, max_u, k1, k2, dim, eta, horizon)
             x = [x1; x2];
             for t = 1:horizon
                 if mod(t, k1) == 1
-                    X = zonotope(interval([x(1,1); -.01],[x(1,1); .01]));
+                    X = zonotope(interval([x(1,1); x(2, 1)],[x(1,1); x(2, 1)]));
                     W = get_max_w(X, T, U, A, dt, k1, k2);
                  end
                  u = stochastic_control(x, max_u, eta);
@@ -60,7 +60,6 @@ function h = supervision_heatmap(A, dt, max_u, k1, k2, dim, eta, horizon)
     end
     h = heat;
 end
-
 
 function h = stochastic_heatmap(A, dt, max_u, dim, eta, horizon)
     heat = ones(dim);
@@ -222,4 +221,3 @@ end
 function res = move(x, u, A, dt)
         res = A*x + [0; dt]*u;
 end
-
