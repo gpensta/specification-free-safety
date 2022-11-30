@@ -1,0 +1,225 @@
+% PARAMS
+dt = 0.1;
+g = -10.;
+l = 1.;
+m = 1.;
+beta = 1.;
+A = [1. dt; -dt*g/l 1-beta/m*dt];
+k1 = 4;
+k2 = 20;
+max_u = 6;
+% END PARAMS
+
+close all
+% profile on
+
+h1 = stochastic_heatmap(A, dt, max_u, 10, .2, 25);
+h2 = supervision_heatmap(A, dt, max_u, k1, k2, 10, .2, 25) ;
+
+figure; 
+subplot(1, 2, 1);
+title('Naive Controller');
+heatmap(h1, 'ColorLimits',[0 5]);
+Ax = gca;
+Ax.XDisplayLabels = nan(size(Ax.XDisplayData));
+Ax.YDisplayLabels = nan(size(Ax.YDisplayData));
+subplot(1, 2, 2);
+title('Supervised Controller');
+heatmap(h2, 'ColorLimits',[0 5]);
+Ax = gca;
+Ax.XDisplayLabels = nan(size(Ax.XDisplayData));
+Ax.YDisplayLabels = nan(size(Ax.YDisplayData));
+
+function h = supervision_heatmap(A, dt, max_u, k1, k2, dim, eta, horizon)
+    heat = ones(dim);
+    X1 = linspace(-1, 1, dim);
+    X2 = linspace(-2, 2, dim);
+    T = zonotope(interval([-.15; -.1],[.15; .1]));
+    U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
+    for i = 1:dim
+        for j = 1:dim
+            x2 = X2(dim + 1 - i);
+            x1 = X1(j);
+            x = [x1; x2];
+            for t = 1:horizon
+                if mod(t, k1) == 1
+                    X = zonotope(interval([x(1,1); -.01],[x(1,1); .01]));
+                    W = get_max_w(X, T, U, A, dt, k1, k2);
+                 end
+                 u = stochastic_control(x, max_u, eta);
+                 if not(isempty(W.vertices))
+                     u = supervision(u, W);
+                 end
+                x = move(x, u, A, dt);
+                if abs(x(1, 1)) > 1.
+                    break;
+                end
+            end
+                heat(i, j) = norm(x);
+        end
+    end
+    h = heat;
+end
+
+
+function h = stochastic_heatmap(A, dt, max_u, dim, eta, horizon)
+    heat = ones(dim);
+    X1 = linspace(-1, 1, dim);
+    X2 = linspace(-2, 2, dim);
+    for i = 1:dim
+        for j = 1:dim
+            x2 = X2(dim + 1 - i);
+            x1 = X1(j);
+            x = [x1; x2];
+            for t = 1:horizon
+                u = stochastic_control(x, max_u, eta);
+                %u = pd_control(x, max_u);
+                x = move(x, u, A, dt); 
+            end
+            heat(i, j) = norm(x);
+        end
+    end
+    h = heat;
+end
+
+function res = supervised_rollout(A, dt, k1, k2, max_u, horizon, n)
+    max_x = .9;
+    resets = 2 * max_x .*rand(1, n) - max_x;
+    T = zonotope(interval([-.15; -.1],[.15; .1]));
+    U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
+    for i = 1:n
+        x = [resets(i); 0];
+        for t = 1:horizon
+             if mod(t, 4) == 1
+                X = zonotope(interval([x(1,1); -.01],[x(1,1); .01]));
+                W = get_max_w(X, T, U, A, dt, k1, k2);
+             end
+             u = stochastic_control(x, max_u, .4);
+             if not(isempty(W.vertices))
+                u = supervision(u, W);
+             end
+            x = move(x, u, A, dt); 
+        end
+        if norm(x) < 1. 
+            resets(i) = 1;
+        else
+            resets(i) = 0;
+        end 
+    end
+    res = sum(resets)/n; 
+end
+
+function res = rollout(A, dt, max_u, T, n)
+    max_x = .9;
+    resets = 2 * max_x .*rand(1, n) - max_x;
+    for i = 1:n
+        x = [resets(i); rand()];
+        for t = 1:T
+             u = stochastic_control(x, max_u, .4);
+            %u = pd_control(x, max_u);
+            x = move(x, u, A, dt); 
+        end
+        if norm(x) < 1.
+            resets(i) = 1; 
+        else
+            resets(i) = 0;
+        end 
+    end
+    % res = sum(resets)/n;
+    res = sum(resets) / n;
+end
+
+function res = supervision(u, w)
+    inter = w.vertices;
+    sup = inter(2, 2);
+    low = inter(2, 1);
+    if u < low
+        u = low;
+    elseif u > sup
+        u = sup;
+    end
+    res = u;
+end
+
+function res = k_step_forward(x, u, A, dt, k)
+    for i = 1:k
+        x = A*x + dt*u;
+        f = plot(x, [1,2], 'r', 'linewidth', .5);
+    end
+    res = x;
+end
+function res = k_step_backward(x, u, A, dt, k)
+    for i = 1:k
+        x = inv(A) *  (x + -dt*u);
+        if mod(i, 2) == 0
+            b = plot(x, [1,2], 'b', 'linewidth', 0.5);
+        end
+    end
+    res = x;
+end
+
+function w = get_max_w(X, T, U, A, dt, k1, k2)
+    % n_points = 1;
+    Theta = [0, pi];
+    c = zeros(2, length(Theta));
+    d = ones(length(Theta), 1);
+    for i = 1:length(Theta)
+        theta = Theta(i);
+        c(1, i) = cos(theta);
+        c(2, i) = sin(theta); % n_points direction on the unit circle.
+        sumai = [0 0; 0 0];
+        l = c(:, i);
+        for k = k2:k1+k2-1
+            sumai = sumai + A^k;
+        end
+        invsumai = inv(sumai); % lhs
+        % rhs
+        rho_s = supportFunc(T, l);
+        rho_aiu = 0;
+        for k = 0:k2-1
+            rho_aiu = rho_aiu + supportFunc(-A^k*U*dt, l);
+        end 
+        rho_ak1k2s = supportFunc(A^(k1+k2)*X, l);
+        rhs = rho_s + rho_aiu - rho_ak1k2s;
+        d(i, 1) = rhs;
+    end
+
+    w_box = (1/dt)*invsumai*mptPolytope(c', d);
+    w = w_box & U;
+end
+
+function res = clip(x, inf , sup)
+    if x < inf
+        x = inf;
+    elseif x > sup
+        x = sup;
+    end
+    res = x;
+end
+
+function res = pd_control(x, sup_u)
+    g = -10.;
+    l = 1.;
+    m = 1.;
+    beta = 1.;
+    a = -g/l;
+    b = -beta/m;
+    u = -(a+1)*x(1,1) - (b+2)*x(2, 1);
+    res = clip(u, -sup_u, sup_u);
+end
+
+function res = stochastic_control(x, max_u, eta)
+    g = -10.;
+    l = 1.;
+    m = 1.;
+    beta = 1.;
+    a = -g/l;
+    b = -beta/m;
+    u = -(a+1)*x(1,1) - (b+2)*x(2, 1);
+    res = clip(u + eta * (2 * max_u *rand() - max_u), -max_u, max_u);
+end
+
+function res = move(x, u, A, dt)
+        res = A*x + [0; dt]*u;
+end
+
