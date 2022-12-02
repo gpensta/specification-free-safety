@@ -11,24 +11,30 @@ max_u = 6;
 % END PARAMS
 
 close all
-% profile on
 
-h1 = stochastic_heatmap(A, dt, max_u, 10, .2, 25);
-h2 = supervision_heatmap(A, dt, max_u, k1, k2, 10, .2, 25) ;
+for eta = 0
+    rng(10*eta);
+    h1 = stochastic_heatmap(A, dt, max_u, 10, eta, 25);
+    rng(10*eta);
+    h2 = supervision_heatmap(A, dt, max_u, k1, k2, 10, eta, 25);
+    f = figure; 
+    subplot(1, 2, 1);
+    heatmap(h1, 'ColorLimits',[0 5]);
+    title(sprintf('naive-eta-%d', floor(10*eta)));
+    Ax = gca;
+    Ax.XDisplayLabels = nan(size(Ax.XDisplayData));
+    Ax.YDisplayLabels = nan(size(Ax.YDisplayData));
+    subplot(1, 2, 2);
+    heatmap(h2, 'ColorLimits',[0 5]);
+    title(sprintf('supervised-eta-%d', floor(10*eta)));
+    Ax = gca;
+    Ax.XDisplayLabels = nan(size(Ax.XDisplayData));
+    Ax.YDisplayLabels = nan(size(Ax.YDisplayData));
+    % saveas(f, sprintf("C:\\Users\\kiwin\\Pictures\\article\\pres\\eta%d.png", floor(10*eta)));
+end
 
-figure; 
-subplot(1, 2, 1);
-heatmap(h1, 'ColorLimits',[0 5]);
-title('Naive Controller');
-Ax = gca;
-Ax.XDisplayLabels = nan(size(Ax.XDisplayData));
-Ax.YDisplayLabels = nan(size(Ax.YDisplayData));
-subplot(1, 2, 2);
-heatmap(h2, 'ColorLimits',[0 5]);
-title('Supervised Controller');
-Ax = gca;
-Ax.XDisplayLabels = nan(size(Ax.XDisplayData));
-Ax.YDisplayLabels = nan(size(Ax.YDisplayData));
+
+
 
 function h = supervision_heatmap(A, dt, max_u, k1, k2, dim, eta, horizon)
     heat = ones(dim);
@@ -73,7 +79,10 @@ function h = stochastic_heatmap(A, dt, max_u, dim, eta, horizon)
             for t = 1:horizon
                 u = stochastic_control(x, max_u, eta);
                 %u = pd_control(x, max_u);
-                x = move(x, u, A, dt); 
+                x = move(x, u, A, dt);
+                if abs(x(1, 1)) > 1.
+                    break;
+                end
             end
             heat(i, j) = norm(x);
         end
