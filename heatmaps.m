@@ -14,33 +14,17 @@ close all
 
 for eta = 0
     rng(10*eta);
-    h1 = stochastic_heatmap(A, dt, max_u, 10, eta, 25);
+    h1 = stochastic_heatmap(A, dt, max_u, 80, eta, 25);
     rng(10*eta);
-    h2 = supervision_heatmap(A, dt, max_u, k1, k2, 10, eta, 25);
-    f = figure; 
-    subplot(1, 2, 1);
-    heatmap(h1, 'ColorLimits',[0 5]);
-    title(sprintf('naive-eta-%d', floor(10*eta)));
-    Ax = gca;
-    Ax.XDisplayLabels = nan(size(Ax.XDisplayData));
-    Ax.YDisplayLabels = nan(size(Ax.YDisplayData));
-    subplot(1, 2, 2);
-    heatmap(h2, 'ColorLimits',[0 5]);
-    title(sprintf('supervised-eta-%d', floor(10*eta)));
-    Ax = gca;
-    Ax.XDisplayLabels = nan(size(Ax.XDisplayData));
-    Ax.YDisplayLabels = nan(size(Ax.YDisplayData));
-    % saveas(f, sprintf("C:\\Users\\kiwin\\Pictures\\article\\pres\\eta%d.png", floor(10*eta)));
+    h2 = supervision_heatmap(A, dt, max_u, k1, k2, 80, eta, 25);
+    plot_heatmap(h1, h2);
 end
-
-
-
 
 function h = supervision_heatmap(A, dt, max_u, k1, k2, dim, eta, horizon)
     heat = ones(dim);
     X1 = linspace(-1, 1, dim);
     X2 = linspace(-2, 2, dim);
-    T = zonotope(interval([-.15; -.1],[.15; .1]));
+    T = zonotope(interval([0.; 0.],[0.; 0.]));
     U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
     for i = 1:dim
         for j = 1:dim
@@ -194,6 +178,34 @@ function w = get_max_w(X, T, U, A, dt, k1, k2)
 
     w_box = (1/dt)*invsumai*mptPolytope(c', d);
     w = w_box & U;
+end
+
+function plot_heatmap(h1, h2)
+    c = get_contour(h1, h2);
+    h1c =  h1 + 10 * c;
+    figure;
+    own = [winter; 1. 1. 1.];
+    heatmap(h1c, 'ColorLimits',[0 3], 'Colormap', own); 
+end
+
+function res = get_contour(h1, h2)
+    mh1 = ones(length(h1));
+    mh2 = ones(length(h1));
+    for i = 1:length(h1)
+        for j = 1:length(h1)
+            if h1(i, j) > 1
+                mh1(i, j) = 1;
+            else
+                mh1(i, j) = 0;
+            end
+            if h2(i, j) > 1
+                mh2(i, j) = 1;
+            else
+                mh2(i, j) = 0;
+            end
+        end
+    end
+    res = mh1-mh2;
 end
 
 function res = clip(x, inf , sup)
