@@ -5,30 +5,33 @@ l = 1.;
 m = 1.;
 beta = 1.;
 A = [1. dt; -dt*g/l 1-beta/m*dt];
+% A = [1 0; 0 1];
 k1 = 4;
-k2 = 20;
+k2 = 9;
 % max_u = 14;
 % END PARAMS
+profile on
 
 for max_u = 7:1:7
     T = zonotope(interval([-.15; -.1],[.15; .1]));
-    X = zonotope(interval([.4; -.1],[.6; .1]));
+    X = zonotope(interval([-.4; .05],[-.3; .1]));
     U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
     
-    W = get_max_w(X, T, U, A, dt, k1, k2);
+    [W, w_box] = get_max_w(X, T, U, A, dt, k1, k2);
     if isempty(W.vertices)
         disp("W is empty.");
     else
         close all;
-        f = figure('Position', [10 10 1920 1200]);
+        f = figure('Position', [10 10 1200 780]);
         subplot(1, 2, 1);
         hold on;
         xlim([-1 1]);
         ylim([-8 8]);
         fX = k_step_forward(X, W, A, dt, k1);
-        bX = k_step_backward(T, U, A, dt, k2);    
+        [bX, kr] = k_step_backward(T, U, A, dt, k2);    
         initial_set = plot(X, [1,2], 'm', 'linewidth', .5);
         target_set = plot(T, [1,2], 'g', 'linewidth', .5);
+        plot(w_box, [1,2], 'm', 'linewidth', .5);
         draw_streamlines(A, dt, max_u, 7);
         subplot(1, 2, 2);
         hold on;
@@ -38,9 +41,10 @@ for max_u = 7:1:7
         legend([w, u], 'w', 'u');
         ylim([-20 20]);
         xlim([-.1 .1]);
-%         saveas(f, sprintf("C:\\Users\\kiwin\\Pictures\\article\\pres\\%d.png", floor(max_u)));
+%       saveas(f, sprintf("C:\\Users\\kiwin\\Pictures\\article\\pres\\%d.png", floor(max_u)));
 end
 end
+profile viewer
 
 function res = k_step_forward(x, u, A, dt, k)
     for i = 1:k
@@ -50,21 +54,29 @@ function res = k_step_forward(x, u, A, dt, k)
     res = x;
 end
 
-function res = k_step_backward(x, u, A, dt, k)
+function [res, kr] = k_step_backward(x, u, A, dt, k)
     for i = 1:k
-        x = inv(A) *  (x + -dt*u);
-        if mod(i, 2) == 0
-            b = plot(x, [1,2], 'b', 'linewidth', 0.5);
+        old_x = x;
+        x = inv(A) *  (old_x + -dt*u);
+        b = plot(x, [1,2], 'b', 'linewidth', 0.5);
+        
+        
+        inter_old = old_x & zonotope(interval([-1.; -8], [1.; 8]));
+        inter = x & zonotope(interval([-1.; -8], [1.; 8]));
+        
+        if inter_old.volume / inter.volume > 0.995
+            kr = i;
+            break
         end
     end
     res = x;
 end
 
-function w = get_max_w(X, T, U, A, dt, k1, k2)
-    n_points = 200;
-    Theta = linspace(0, 2*pi, n_points);
-    c = zeros(2, n_points);
-    d = ones(n_points, 1);
+function [w, w_box] = get_max_w(X, T, U, A, dt, k1, k2)
+    % Theta = linspace(0, 2*pi, n_points);
+    Theta = [0,pi, pi*0.5, pi*1.5];
+    c = zeros(2, length(Theta));
+    d = ones(length(Theta), 1);
     for i = 1:length(Theta)
         theta = Theta(i);
         c(1, i) = cos(theta);
@@ -89,6 +101,7 @@ function w = get_max_w(X, T, U, A, dt, k1, k2)
     w_box = (1/dt)*invsumai*mptPolytope(c', d);
     w = w_box & U;
 end
+
 
 function res = clip(x, inf , sup)
     if x < inf
@@ -120,7 +133,6 @@ function draw_streamlines(A, dt, max_u, num)
     [SX, SY] = meshgrid(linspace(-1, 1, num), linspace(-8, 8, num));
     U = ones(n);
     V = ones(n);
-
     for i = 1:1:n
         for j = 1:1:n
             x1 = X(i, j);
@@ -135,3 +147,4 @@ function draw_streamlines(A, dt, max_u, num)
     slines = streamline(X, Y, U, V, SX, SY);
     set(slines, 'Color', 'k');
 end
+

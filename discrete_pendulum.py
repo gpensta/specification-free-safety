@@ -5,6 +5,13 @@ from stable_baselines3.common.env_checker import check_env
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 
+def clip(x, inf, sup):
+    if x < inf:
+        x = inf
+    elif x > sup:
+        x = sup 
+    return x
+
 class Pendulum():
     def __init__(self, x1, x2) -> None:
         self.x = np.array([[x1], [x2]])
@@ -13,7 +20,7 @@ class Pendulum():
         self.beta = 1
         self.m = 1
         self.dt = 0.1
-        self.model = PPO.load('models/inv_pend')
+        # self.model = PPO.load('models/inv_pend')
 
     def draw(self, fig):
         plt.cla()
@@ -29,16 +36,16 @@ class Pendulum():
     #     u = 10 * (-self.x[0, 0])
     #     return 7 * np.tanh(u)
 
-    def rl_control(self):
-        u, _ = self.model.predict(self.x.flatten())
-        u = u[0]
-        return u
+    # def rl_control(self):
+    #     u, _ = self.model.predict(self.x.flatten())
+    #     u = u[0]
+    #     return u
 
     def pd_control(self, sup_u):
         a = -self.g/self.l
         b = -self.beta/self.m
         u = -(a+1) * self.x[0, 0] - (b+2) * self.x[1, 0]
-        return sup_u * np.tanh(u)
+        return clip(u, -sup_u, sup_u)
 
 def draw_quiver():
     x1_list = []
@@ -52,7 +59,7 @@ def draw_quiver():
             x1_list.append(x1)
             x2_list.append(x2)
             pend.x =np.array([[x1], [x2]])
-            u = 0 # pend.rl_control()
+            u = pend.pd_control(6.)
             pend.move(u)
             norm = np.linalg.norm(np.array([(pend.x[0, 0] - x1), (pend.x[1, 0] - x2)]))
             colors.append(norm)
@@ -65,18 +72,18 @@ def draw_quiver():
  
 def main():
     fig = plt.figure()
-    x1 = (2 * np.random.rand() - 1.) * 0.1
-    pendulum = Pendulum(x1, 0)
+    # x1 = (2 * np.random.rand() - 1.) * 0.1
+    pendulum = Pendulum(0.68, 0.)
     pendulum.draw(fig)
     x1 = []
     x2 = []
     u_list = []
     w = 1
-    for i in range(50):
-        if i < 4:
+    for i in range(25):
+        if i < 0:
             u = (2 * np.random.rand() - 1) * w 
         else:
-            u = pendulum.pd_control(5)
+            u = pendulum.pd_control(6.)
         u_list.append(u)
         pendulum.move(u)
         x1.append(pendulum.x[0, 0])
@@ -88,15 +95,16 @@ def main():
         plt.pause(0.05)     
     plt.figure()
     plt.title("x1")
+    plt.ylim(-1, 1)
     plt.plot(x1)
-    plt.scatter([3], [x1[3]])
-    plt.scatter([12], [x1[12]])
+    # plt.scatter([3], [x1[3]])
+    # plt.scatter([12], [x1[12]])
     plt.savefig('results/x1.png')
     plt.figure()
     plt.title("x2")
     plt.plot(x2)
-    plt.scatter([3], [x2[3]])
-    plt.scatter([12], [x2[12]])
+    # plt.scatter([3], [x2[3]])
+    # plt.scatter([12], [x2[12]])
     plt.savefig('results/x2.png')
     plt.figure()
     plt.title("u")
@@ -123,9 +131,12 @@ def rollouts(num, sup_x1):
         if np.abs(pendulum.x[0, 0]) > 0.3:
                 compteur += 1
     return compteur / num
-    
+
+def draw_heatmap():
+    pass
+
 if __name__ == '__main__':
-    sup_x1 = 0.15
-    # main()
+    # sup_x1 = 0.15
+    main()
     # print("Failing ratio: ", rollouts(100, sup_x1))
-    draw_quiver()
+    # draw_quiver()
