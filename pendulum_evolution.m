@@ -36,7 +36,7 @@ for k =  1:length(starting_pos)
     for t=1:1:horizon
         u = stochastic_control(x, max_u, eta);
         naive_u(t) = u;
-        x = moverk(x, u, dt); 
+        x = move_exact(x, u, dt); 
         naive_traj(1, t) = x(1, 1);
         naive_traj(2, t) = x(2, 1);
     end
@@ -59,11 +59,14 @@ for k =  1:length(starting_pos)
         end
         supervised_u(1, t) = u;
         supervised_u(2, t) = super;
-        x = moverk(x, u, dt); 
+        x = move_exact(x, u, dt); 
         supervised_traj(1, t) = x(1, 1);
         supervised_traj(2, t) = x(2, 1);
     end
 
+
+
+    
     subplot(3,4, 2*k-1);
     title('position');
     hold on;
@@ -71,6 +74,7 @@ for k =  1:length(starting_pos)
     plot(1:1:horizon, naive_traj(1, :), 'b');
     plot(1:1:horizon, supervised_traj(1, :), 'r');
     plot(1:1:horizon, zeros(1, horizon), 'k--');
+
 
     col = 'kr';
     subplot(3, 4, 2*k);
@@ -85,6 +89,27 @@ for k =  1:length(starting_pos)
     plot(1:1:horizon, naive_u, 'b');
 % plot(1:1:horizon, supervised_u(1, :), 'k');
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function [res, super] = supervision(u, w)
     inter = w.vertices;
@@ -179,15 +204,12 @@ function res = stochastic_control(x, max_u, eta)
     res = clip(u + eta * (2 * max_u *rand() - max_u), -max_u, max_u);
 end
 
-function dydt = odefcn(t, y, u)
-  dydt = zeros(2,1);
-  dydt(1) = y(2);
-  dydt(2) = 10*y(1)-y(2)+u;
-end
-
-function res = moverk(x, u, dt)
-    [t,y] = ode45(@(t,y) odefcn(t,y,u), [0 dt], x);
-    res = y(end, :)'; 
+function res = move_exact(x, u, dt)
+    A = [0 1; 10 -1]; 
+    inva = inv(A);
+    K = x + inva * [0; u];
+    x  = expm(dt * A) * K - inva * [0; u]; 
+    res = x; 
 end
 
 function res = move(x, u, A, dt)
