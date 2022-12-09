@@ -5,8 +5,8 @@ l = 1.;
 m = 1.;
 beta = 1.;
 A = [1. dt; -dt*g/l 1-beta/m*dt];
-k1 = 4;
-k2 = 20;
+k1 = 17;
+k2 = 9;
 max_u = 6;
 % END PARAMS
 
@@ -14,9 +14,9 @@ close all
 
 for eta = 0
     rng(10*eta);
-    h1 = stochastic_heatmap(A, dt, max_u, 80, eta, 25);
+    h1 = stochastic_heatmap(A, dt, max_u, 20, eta, 25);
     rng(10*eta);
-    h2 = supervision_heatmap(A, dt, max_u, k1, k2, 80, eta, 25);
+    h2 = supervision_heatmap(A, dt, max_u, k1, k2, 20, eta, 25);
     plot_heatmap(h1, h2);
 end
 
@@ -72,53 +72,6 @@ function h = stochastic_heatmap(A, dt, max_u, dim, eta, horizon)
         end
     end
     h = heat;
-end
-
-function res = supervised_rollout(A, dt, k1, k2, max_u, horizon, n)
-    max_x = .9;
-    resets = 2 * max_x .*rand(1, n) - max_x;
-    T = zonotope(interval([-.15; -.1],[.15; .1]));
-    U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
-    for i = 1:n
-        x = [resets(i); 0];
-        for t = 1:horizon
-             if mod(t, 4) == 1
-                X = zonotope(interval([x(1,1); -.01],[x(1,1); .01]));
-                W = get_max_w(X, T, U, A, dt, k1, k2);
-             end
-             u = stochastic_control(x, max_u, .4);
-             if not(isempty(W.vertices))
-                u = supervision(u, W);
-             end
-            x = move(x, u, A, dt); 
-        end
-        if norm(x) < 1. 
-            resets(i) = 1;
-        else
-            resets(i) = 0;
-        end 
-    end
-    res = sum(resets)/n; 
-end
-
-function res = rollout(A, dt, max_u, T, n)
-    max_x = .9;
-    resets = 2 * max_x .*rand(1, n) - max_x;
-    for i = 1:n
-        x = [resets(i); rand()];
-        for t = 1:T
-             u = stochastic_control(x, max_u, .4);
-            %u = pd_control(x, max_u);
-            x = move(x, u, A, dt); 
-        end
-        if norm(x) < 1.
-            resets(i) = 1; 
-        else
-            resets(i) = 0;
-        end 
-    end
-    % res = sum(resets)/n;
-    res = sum(resets) / n;
 end
 
 function res = supervision(u, w)

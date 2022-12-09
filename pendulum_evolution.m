@@ -64,9 +64,6 @@ for k =  1:length(starting_pos)
         supervised_traj(2, t) = x(2, 1);
     end
 
-
-
-    
     subplot(3,4, 2*k-1);
     title('position');
     hold on;
@@ -74,7 +71,6 @@ for k =  1:length(starting_pos)
     plot(1:1:horizon, naive_traj(1, :), 'b');
     plot(1:1:horizon, supervised_traj(1, :), 'r');
     plot(1:1:horizon, zeros(1, horizon), 'k--');
-
 
     col = 'kr';
     subplot(3, 4, 2*k);
@@ -89,27 +85,6 @@ for k =  1:length(starting_pos)
     plot(1:1:horizon, naive_u, 'b');
 % plot(1:1:horizon, supervised_u(1, :), 'k');
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function [res, super] = supervision(u, w)
     inter = w.vertices;
