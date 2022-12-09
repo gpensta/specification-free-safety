@@ -6,6 +6,6 @@ Example: pendulum.
 
 Files:
 
-* pendulum.m: plot of sets. 
-* pendulum_evolution.m: plot of trajectories and sequence of inputs. 
-* heatmaps.m : plot of heatmaps of the state space.
+    * pendulum.m: plot of sets. 
+    * pendulum_evolution.m: plot of trajectories, sequence of inputs. 
+    * heatmaps.m : plot of heatmaps of the state space.
