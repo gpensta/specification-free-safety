@@ -84,7 +84,7 @@ function [w, w_box] = get_max_w(X, T, U, A, dt, delta, k1, k2)
         for j = 1:n2
             sum = sum + expm(A * delta * j) * delta * U;
         end
-        rhs1 = supportFunc(expm(-A * k2 * dt) *( X + (-1)*sum), l);
+        rhs1 = supportFunc(expm(-A * k2 * dt) *(T + (-1)*sum), l);
         rhs2 = supportFunc(expm(k1*dt*A)*X, l);
         rhs = rhs1 - rhs2;
         d(i, 1) = rhs;
