@@ -11,13 +11,12 @@ k2 = 9;
 % max_u = 14;
 % END PARAMS
 
-
 for max_u = 6
     T = zonotope(interval([-.15; -.1],[.15; .1]));
     X = zonotope(interval([-.4; .1],[-.4; .1]));
     U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
-    [W, w_box] = get_max_w(X, T, U, A, dt, dt/10, k1, k2);
-    %[W, w_box] = get_max_w_euler(X, T, U, A, dt, k1, k2);
+    [W, w_box] = get_max_w(X, T, U, dt, dt/10, k1, k2);
+   % [W, w_box] = get_max_w_euler(X, T, U, A, dt, k1, k2);
     if isempty(W.vertices)
         disp("W is empty.");
     else
@@ -66,7 +65,7 @@ function res = k_step_backward(x, u, A, dt, delta, k)
     res = expm(-A * k * dt) *( x + (-1)*sum);
 end
 
-function [w, w_box] = get_max_w(X, T, U, A, dt, delta, k1, k2)
+function [w, w_box] = get_max_w(X, T, U, dt, delta, k1, k2)
     Theta = linspace(0, 2*pi, 10);
     A = [0 1; 10 -1];
     %Theta = [0,pi, pi*0.5, pi*1.5];
@@ -80,13 +79,14 @@ function [w, w_box] = get_max_w(X, T, U, A, dt, delta, k1, k2)
         c(2, i) = sin(theta); % n_points direction on the unit circle.
         l = c(:, i);
         %rhs
-        sum = delta * U;
-        for j = 1:n2
-            sum = sum + expm(A * delta * j) * delta * U;
+        rhs1 = supportFunc(expm(-A * k2 * dt) * T, l);
+        rhs2 = 0.;
+        for j = 0:n2
+            M = -expm(A * (delta * j - k2 * dt)) * delta;
+            rhs2 = rhs2 + supportFunc(M * U, l);
         end
-        rhs1 = supportFunc(expm(-A * k2 * dt) *(T + (-1)*sum), l);
-        rhs2 = supportFunc(expm(k1*dt*A)*X, l);
-        rhs = rhs1 - rhs2;
+        rhs3 = supportFunc(expm(k1*dt*A)*X, l);
+        rhs = rhs1 + rhs2 - rhs3;
         d(i, 1) = rhs;
     end
     lhs = [delta 0; 0 delta];
