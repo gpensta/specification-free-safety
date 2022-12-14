@@ -5,20 +5,50 @@ l = 1.;
 m = 1.;
 beta = 1.;
 A = [1. dt; -dt*g/l 1-beta/m*dt];
-k1 = 17;
+k1 = 4;
 k2 = 9;
 max_u = 6;
 % END PARAMS
 
 close all
 
-for eta = 0
-    rng(10*eta);
-    h1 = stochastic_heatmap(A, dt, max_u, 20, eta, 25);
-    rng(10*eta);
-    h2 = supervision_heatmap(A, dt, max_u, k1, k2, 20, eta, 25);
-    plot_heatmap(h1, h2);
+n = 200; % dimension of the heatmap. 
+
+h1 = stochastic_heatmap(A, dt, max_u, n, eta, 25);
+h2 = supervision_heatmap(A, dt, max_u, k1, k2, n, eta, 25);
+% save('super200.mat','h2');
+h = heatmap(h1, 'Colormap', winter, 'GridVisible','off');
+h.XDisplayLabels = nan(size(h.XDisplayData));
+h.YDisplayLabels = nan(size(h.YDisplayData));
+colorbar('off')
+
+% Plot contour line related to supervised set. 
+
+x = 1:n;
+y = 1:n;
+[X,Y] = meshgrid(x,y);
+Z = ones(n);
+for i = 1:n
+    for j = 1:n   
+        Z(i, j) = h2(X(i, j), Y(i, j));
+    end
 end
+ax1 = axes;
+Z = rot90(Z);
+[x1,y1] = contour(ax1, X, Y, Z, [1. 1.],'red', 'linewidth', 2.);
+ax1.Color = 'none';
+set(gca,'Ytick',[]) 
+set(gca,'Xtick',[])
+
+% Plot backward set.
+
+ax2 = axes;
+hold(ax2,'on')
+plot(ax2, [-1 -0.058], [1.487 -2], 'k', 'linewidth', 2.);
+plot(ax2, [0.058 1], [2 -1.485], 'k', 'linewidth', 2.);
+ax2.Color = 'none';
+xlim([-1 1]);
+ylim([-2 2]);
 
 function h = supervision_heatmap(A, dt, max_u, k1, k2, dim, eta, horizon)
     heat = ones(dim);
@@ -36,7 +66,7 @@ function h = supervision_heatmap(A, dt, max_u, k1, k2, dim, eta, horizon)
                     X = zonotope(interval([x(1,1); x(2, 1)],[x(1,1); x(2, 1)]));
                     W = get_max_w(X, T, U, A, dt, k1, k2);
                  end
-                 u = stochastic_control(x, max_u, eta);
+                 u = pd_control(x, max_u, eta);
                  if not(isempty(W.vertices))
                      u = supervision(u, W);
                  end
@@ -61,7 +91,7 @@ function h = stochastic_heatmap(A, dt, max_u, dim, eta, horizon)
             x1 = X1(j);
             x = [x1; x2];
             for t = 1:horizon
-                u = stochastic_control(x, max_u, eta);
+                u = pd_control(x, max_u, eta);
                 %u = pd_control(x, max_u);
                 x = move(x, u, A, dt);
                 if abs(x(1, 1)) > 1.
@@ -89,16 +119,12 @@ end
 function res = k_step_forward(x, u, A, dt, k)
     for i = 1:k
         x = A*x + dt*u;
-        f = plot(x, [1,2], 'r', 'linewidth', .5);
     end
     res = x;
 end
 function res = k_step_backward(x, u, A, dt, k)
     for i = 1:k
         x = inv(A) *  (x + -dt*u);
-        if mod(i, 2) == 0
-            b = plot(x, [1,2], 'b', 'linewidth', 0.5);
-        end
     end
     res = x;
 end
@@ -111,13 +137,8 @@ function w = get_max_w(X, T, U, A, dt, k1, k2)
     for i = 1:length(Theta)
         theta = Theta(i);
         c(1, i) = cos(theta);
-        c(2, i) = sin(theta); % n_points direction on the unit circle.
-        sumai = [0 0; 0 0];
+        c(2, i) = sin(theta); % c -> n_points direction on the unit circle.
         l = c(:, i);
-        for k = k2:k1+k2-1
-            sumai = sumai + A^k;
-        end
-        invsumai = inv(sumai); % lhs
         % rhs
         rho_s = supportFunc(T, l);
         rho_aiu = 0;
@@ -128,37 +149,13 @@ function w = get_max_w(X, T, U, A, dt, k1, k2)
         rhs = rho_s + rho_aiu - rho_ak1k2s;
         d(i, 1) = rhs;
     end
-
+    sumai = [0 0; 0 0];
+    for k = k2:k1+k2-1
+        sumai = sumai + A^k;
+    end
+    invsumai = inv(sumai); % lhs
     w_box = (1/dt)*invsumai*mptPolytope(c', d);
     w = w_box & U;
-end
-
-function plot_heatmap(h1, h2)
-    c = get_contour(h1, h2);
-    h1c =  h1 + 10 * c;
-    figure;
-    own = [winter; 1. 1. 1.];
-    heatmap(h1c, 'ColorLimits',[0 3], 'Colormap', own); 
-end
-
-function res = get_contour(h1, h2)
-    mh1 = ones(length(h1));
-    mh2 = ones(length(h1));
-    for i = 1:length(h1)
-        for j = 1:length(h1)
-            if h1(i, j) > 1
-                mh1(i, j) = 1;
-            else
-                mh1(i, j) = 0;
-            end
-            if h2(i, j) > 1
-                mh2(i, j) = 1;
-            else
-                mh2(i, j) = 0;
-            end
-        end
-    end
-    res = mh1-mh2;
 end
 
 function res = clip(x, inf , sup)
@@ -170,18 +167,7 @@ function res = clip(x, inf , sup)
     res = x;
 end
 
-function res = pd_control(x, sup_u)
-    g = -10.;
-    l = 1.;
-    m = 1.;
-    beta = 1.;
-    a = -g/l;
-    b = -beta/m;
-    u = -(a+1)*x(1,1) - (b+2)*x(2, 1);
-    res = clip(u, -sup_u, sup_u);
-end
-
-function res = stochastic_control(x, max_u, eta)
+function res = pd_control(x, max_u, eta)
     g = -10.;
     l = 1.;
     m = 1.;
