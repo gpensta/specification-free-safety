@@ -13,7 +13,7 @@ eta = 0; % noise on the policy: a percentage of the max interval.
 
 close all
 
-n = 200; % dimension of the heatmap. 
+n = 15; % dimension of the heatmap. 
 
 h1 = stochastic_heatmap(A, dt, max_u, n, eta, 25);
 h2 = supervision_heatmap(A, dt, max_u, k1, k2, n, eta, 25);
@@ -45,8 +45,10 @@ set(gca,'Xtick',[])
 
 ax2 = axes;
 hold(ax2,'on')
-plot(ax2, [-1 -0.058], [1.487 -2], 'k', 'linewidth', 2.);
-plot(ax2, [0.058 1], [2 -1.485], 'k', 'linewidth', 2.);
+T = zonotope(interval([0.; 0.],[0.; 0.]));
+U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
+bX = k_step_backward(T, U, A, dt, 30);
+plot(bX, [1,2], 'k', 'linewidth', 2.);
 ax2.Color = 'none';
 xlim([-1 1]);
 ylim([-2 2]);
@@ -168,6 +170,7 @@ function res = clip(x, inf , sup)
     res = x;
 end
 
+
 function res = pd_control(x, max_u, eta)
     g = -10.;
     l = 1.;
@@ -179,6 +182,14 @@ function res = pd_control(x, max_u, eta)
     res = clip(u + eta * (2 * max_u *rand() - max_u), -max_u, max_u);
 end
 
+% function res = move(x, u, A, dt)
+%         res = A*x + [0; dt]*u;
+% end
+
 function res = move(x, u, A, dt)
-        res = A*x + [0; dt]*u;
+    A = [0 1; 10 -1]; 
+    inva = inv(A);
+    K = x + inva * [0; u];
+    x  = expm(dt * A) * K - inva * [0; u]; 
+    res = x; 
 end
