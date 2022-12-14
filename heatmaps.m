@@ -1,13 +1,14 @@
 % PARAMS
 dt = 0.1;
 g = -10.;
-l = 1.;
-m = 1.;
-beta = 1.;
-A = [1. dt; -dt*g/l 1-beta/m*dt];
-k1 = 4;
-k2 = 9;
-max_u = 6;
+l = 1.; % length pendulum.
+m = 1.; 
+beta = 1.; % drag coeff. 
+A = [1. dt; -dt*g/l 1-beta/m*dt]; % evolution matrice, x(k+1) = A x(k) + U. 
+k1 = 4; % num of forward steps for the supervisor.
+k2 = 9; % num of backward steps. 
+max_u = 6; % max input. 
+eta = 0; % noise on the policy: a percentage of the max interval. 
 % END PARAMS
 
 close all
