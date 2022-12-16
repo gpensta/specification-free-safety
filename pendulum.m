@@ -17,7 +17,7 @@ for max_u = 7:1:7
     X = zonotope(interval([-.4; .05],[-.3; .1]));
     U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
     
-    [W, w_box] = get_max_w(X, T, U, A, dt, k1, k2);
+    [W, w_box] = get_max_w_euler(X, T, U, A, dt, k1, k2);
     if isempty(W.vertices)
         disp("W is empty.");
     else
@@ -72,7 +72,38 @@ function [res, kr] = k_step_backward(x, u, A, dt, k)
     res = x;
 end
 
-function [w, w_box] = get_max_w(X, T, U, A, dt, k1, k2)
+function [w, w_box] = get_max_w(X, T, U, dt, delta, k1, k2)
+    %
+    Theta = linspace(0, 2*pi, 20);
+    A = [0 1; 10 -1];
+    c = zeros(2, length(Theta));
+    d = ones(length(Theta), 1);
+    n1 = floor((k1 * dt)/delta);
+    n2 = floor((k2 * dt)/delta);
+    for i = 1:length(Theta)
+        theta = Theta(i);
+        c(1, i) = cos(theta);
+        c(2, i) = sin(theta); % n_points direction on the unit circle.
+        l = c(:, i);
+        %rhs
+        rhs1 = supportFunc(T, l);
+        rhs2 = 0.;
+        for j = 0:n2
+            rhs2 = rhs2 + supportFunc(-expm(A * j * delta) * delta * U, l);
+        end
+        rhs3 = supportFunc(expm(A*(k1+k2)*dt)*X, l);
+        rhs = rhs1 + rhs2 - rhs3;
+        d(i, 1) = rhs;
+    end
+    lhs = [delta 0; 0 delta];
+    for j=1:n1
+        lhs = lhs + expm(A * (delta * j + k2 * dt)) * delta;
+    end
+    w_box = inv(lhs)* mptPolytope(c', d);
+    w = w_box & U;
+end
+
+function [w, w_box] = get_max_w_euler(X, T, U, A, dt, k1, k2)
     % Theta = linspace(0, 2*pi, n_points);
     Theta = [0,pi, pi*0.5, pi*1.5];
     c = zeros(2, length(Theta));
