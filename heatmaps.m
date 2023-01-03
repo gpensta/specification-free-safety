@@ -5,15 +5,17 @@ l = 1.; % length pendulum.
 m = 1.; 
 beta = 1.; % drag coeff. 
 A = [1. dt; -dt*g/l 1-beta/m*dt]; % evolution matrice, x(k+1) = A x(k) + U. 
-k1 = 4; % num of forward steps for the supervisor.
-k2 = 9; % num of backward steps. 
+k1 = 1; % num of forward steps for the supervisor.
+k2 = 25; % num of backward steps. 
 max_u = 6; % max input. 
 eta = 0; % noise on the policy: a percentage of the max interval. 
 % END PARAMS
 
-close all
+close all;
 
-n = 15; % dimension of the heatmap. 
+figure;
+
+n = 80; % dimension of the heatmap. 
 
 h1 = stochastic_heatmap(A, dt, max_u, n, eta, 25);
 h2 = supervision_heatmap(A, dt, max_u, k1, k2, n, eta, 25);
@@ -47,11 +49,20 @@ ax2 = axes;
 hold(ax2,'on')
 T = zonotope(interval([0.; 0.],[0.; 0.]));
 U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
-bX = k_step_backward(T, U, A, dt, 30);
+bX = k_step_backward(T, U, A, dt, k2);
 plot(bX, [1,2], 'k', 'linewidth', 2.);
 ax2.Color = 'none';
 xlim([-1 1]);
 ylim([-2 2]);
+
+% Plot test points. 
+
+% ax3 = axes;
+% hold(ax2,'on')
+% scatter(starting_pos(1, :), starting_pos(2, :), 20, 'm', 'filled');
+% ax3.Color = 'none';
+% xlim([-1 1]);
+% ylim([-2 2]);
 
 function h = supervision_heatmap(A, dt, max_u, k1, k2, dim, eta, horizon)
     heat = ones(dim);
@@ -59,15 +70,16 @@ function h = supervision_heatmap(A, dt, max_u, k1, k2, dim, eta, horizon)
     X2 = linspace(-2, 2, dim);
     T = zonotope(interval([0.; 0.],[0.; 0.]));
     U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
+    B = k_step_backward(T, U, A, dt, k2);
     for i = 1:dim
         for j = 1:dim
             x2 = X2(dim + 1 - i);
             x1 = X1(j);
             x = [x1; x2];
             for t = 1:horizon
-                if mod(t, k1) == 1
-                    X = zonotope(interval([x(1,1); x(2, 1)],[x(1,1); x(2, 1)]));
-                    W = get_max_w(X, T, U, A, dt, k1, k2);
+                if mod(t, k1) == 0
+                    %X = zonotope(interval([x(1,1); x(2, 1)],[x(1,1); x(2, 1)]));
+                    W = get_max_w_quick(x, B, U, A, dt);
                  end
                  u = pd_control(x, max_u, eta);
                  if not(isempty(W.vertices))
@@ -132,32 +144,8 @@ function res = k_step_backward(x, u, A, dt, k)
     res = x;
 end
 
-function w = get_max_w(X, T, U, A, dt, k1, k2)
-    % n_points = 1;
-    Theta = [0, pi];
-    c = zeros(2, length(Theta));
-    d = ones(length(Theta), 1);
-    for i = 1:length(Theta)
-        theta = Theta(i);
-        c(1, i) = cos(theta);
-        c(2, i) = sin(theta); % c -> n_points direction on the unit circle.
-        l = c(:, i);
-        % rhs
-        rho_s = supportFunc(T, l);
-        rho_aiu = 0;
-        for k = 0:k2-1
-            rho_aiu = rho_aiu + supportFunc(-A^k*U*dt, l);
-        end 
-        rho_ak1k2s = supportFunc(A^(k1+k2)*X, l);
-        rhs = rho_s + rho_aiu - rho_ak1k2s;
-        d(i, 1) = rhs;
-    end
-    sumai = [0 0; 0 0];
-    for k = k2:k1+k2-1
-        sumai = sumai + A^k;
-    end
-    invsumai = inv(sumai); % lhs
-    w_box = (1/dt)*invsumai*mptPolytope(c', d);
+function [w, w_box] = get_max_w_quick(X, B, U, A, dt)
+    w_box = polytope((1/dt)*(-A*X + B));
     w = w_box & U;
 end
 
@@ -182,14 +170,14 @@ function res = pd_control(x, max_u, eta)
     res = clip(u + eta * (2 * max_u *rand() - max_u), -max_u, max_u);
 end
 
-% function res = move(x, u, A, dt)
-%         res = A*x + [0; dt]*u;
-% end
-
 function res = move(x, u, A, dt)
-    A = [0 1; 10 -1]; 
-    inva = inv(A);
-    K = x + inva * [0; u];
-    x  = expm(dt * A) * K - inva * [0; u]; 
-    res = x; 
+        res = A*x + [0; dt]*u;
 end
+
+% function res = move(x, u, A, dt)
+%     A = [0 1; 10 -1]; 
+%     inva = inv(A);
+%     K = x + inva * [0; u];
+%     x  = expm(dt * A) * K - inva * [0; u]; 
+%     res = x; 
+% end
