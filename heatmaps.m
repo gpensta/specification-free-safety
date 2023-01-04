@@ -15,10 +15,11 @@ close all;
 
 figure;
 
-n = 80; % dimension of the heatmap. 
-
+n = 10; % dimension of the heatmap. 
+profile on
 h1 = stochastic_heatmap(A, dt, max_u, n, eta, 25);
 h2 = supervision_heatmap(A, dt, max_u, k1, k2, n, eta, 25);
+profile viewer
 % save('super200.mat','h2');
 h = heatmap(h1, 'Colormap', winter, 'GridVisible','off');
 h.XDisplayLabels = nan(size(h.XDisplayData));
@@ -77,12 +78,11 @@ function h = supervision_heatmap(A, dt, max_u, k1, k2, dim, eta, horizon)
             x1 = X1(j);
             x = [x1; x2];
             for t = 1:horizon
-                if mod(t, k1) == 0
-                    %X = zonotope(interval([x(1,1); x(2, 1)],[x(1,1); x(2, 1)]));
+                 if mod(t, k1) == 0
                     W = get_max_w_quick(x, B, U, A, dt);
                  end
                  u = pd_control(x, max_u, eta);
-                 if not(isempty(W.vertices))
+                 if not(W.inf == -Inf)
                      u = supervision(u, W);
                  end
                 x = move(x, u, A, dt);
@@ -120,9 +120,8 @@ function h = stochastic_heatmap(A, dt, max_u, dim, eta, horizon)
 end
 
 function res = supervision(u, w)
-    inter = w.vertices;
-    sup = inter(2, 2);
-    low = inter(2, 1);
+    sup = w.sup;
+    low = w.inf;
     if u < low
         u = low;
     elseif u > sup
@@ -147,6 +146,8 @@ end
 function [w, w_box] = get_max_w_quick(X, B, U, A, dt)
     w_box = polytope((1/dt)*(-A*X + B));
     w = w_box & U;
+    temp = w.interval;
+    w = temp(2, 1);
 end
 
 function res = clip(x, inf , sup)
