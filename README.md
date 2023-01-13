@@ -10,11 +10,13 @@ You just need to add CORA 2021 toolbox in the path of your MatLab.
 
 https://tumcps.github.io/CORA/
 
-
-Files:
+# Files:
 
     * pendulum.m: plot of sets. 
     * pendulum_evolution.m: plot of trajectories, sequence of inputs. 
     * heatmaps.m : plot of heatmaps of the state space.
 
 
+Attention la projection est dangereuse car elle pousse à être sur le bord de l'ensemble backward, prendre un range. 
+
+Etudier la convexité.

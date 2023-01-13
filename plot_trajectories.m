@@ -20,6 +20,7 @@ points = [2 * rand(1, n_points) - 1; 4 * rand(1, n_points) - 2.]; % initial cond
 T = [0; 0]; 
 U = max_u * zonotope(interval([0.; -1.],[0. ; 1.]));
 B = k_step_backward(T, U, A, dt, k2);
+Br = 1 * B;
 close all;
 
 figure;
@@ -27,16 +28,18 @@ hold on;
 xlim([-1 1]);
 ylim([-2 2]);
 
-plot(bX, [1,2], 'k', 'linewidth', 2.); % Plot backward set
+plot(B, [1,2], 'k', 'linewidth', 2.); % Plot backward set
+plot(Br, [1,2], 'k--', 'linewidth', .5); % Plot backward set
 
 for i = 1:n_points
     x = points(:, i);
     traj = ones(2, horizon+1);
     traj(:, 1) = x;
     col = [.9 .9 .9];
+    super = 0;
     for t = 1:horizon
         if mod(t, k1) == 0
-            W = get_max_w_quick(x, B, U, A, dt);
+            W = get_max_w_quick(x, Br, U, A, dt);
          end
          u = pd_control(x, max_u, eta);
          if not(W.inf == -Inf)
@@ -55,8 +58,10 @@ for i = 1:n_points
 end 
  
 % Plot contour 
+n = 100;
 x = 1:n;
 y = 1:n;
+h1 = stochastic_heatmap(A, dt, max_u, n, eta, horizon);
 [X,Y] = meshgrid(x,y);
 Z = ones(n);
 for i = 1:n
