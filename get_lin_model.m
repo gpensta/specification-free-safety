@@ -1,5 +1,5 @@
 function [A, B] = get_lin_model()
-    m = 1.;  g = -9.81; l = 1.; dt = .01; beta = 1;
+    m = 1.;  g = -9.81; l = 1.; dt = .05; beta = 1;
     a = (m * g * l * cos(0)) / (m * l * l);
     b = l  / (m * l * l);
     A = [1,    dt;

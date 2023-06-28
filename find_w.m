@@ -1,6 +1,6 @@
 function [W] = find_w(S, U)
     [A, B] = get_lin_model();
-    n_points = 10; m = 1.;  g = -9.81; l = 1.; beta = 1 ; max_u  = 10.; dt = .01; 
+    n_points = 10; m = 1.;  g = -9.81; l = 1.; beta = 1 ; max_u  = 10.; dt = .05; 
     a = (m * g * l * cos(0)) / (m * l * l);
     b = l  / (m * l * l);
     temp = S.interval(); x1 = temp(1); x2 = temp(2);
